@@ -32,14 +32,23 @@ def clean_text(text):
     return text
 
 def predict_sentiment(text):
-    text = clean_text(text)
-    seq = tokenizer.texts_to_sequences([text])
+    text_clean = clean_text(text)
+    seq = tokenizer.texts_to_sequences([text_clean])
     pad = pad_sequences(seq, maxlen=MAX_LEN, padding="post")
-    pred = model.predict(pad)[0]
-    label = list(label_map.keys())[np.argmax(pred)]
-    return label
+
+    probs = model.predict(pad)[0]
+    idx = np.argmax(probs)
+    label = list(label_map.keys())[idx]
+    confidence = probs[idx]
+
+    return label, confidence, probs, text_clean
+
 
 st.title("📊 Sentiment Analysis Komentar YouTube")
+st.caption(
+    "Model: GRU | Dataset: Komentar YouTube | "
+    "Kelas: Negatif, Netral, Positif"
+)
 
 text = st.text_area("Masukkan komentar:")
 
@@ -47,7 +56,19 @@ if st.button("Prediksi"):
     if text.strip() == "":
         st.warning("Teks tidak boleh kosong")
     else:
-        result = predict_sentiment(text)
-        st.success(f"Hasil Sentimen: **{result}**")
+        label, conf, probs, clean = predict_sentiment(text)
+
+        st.success(f"Sentimen: **{label}**")
+        st.write(f"Tingkat keyakinan model: **{conf*100:.2f}%**")
+
+        st.subheader("Probabilitas Setiap Kelas")
+        st.bar_chart({
+            "Negatif": probs[0],
+            "Netral": probs[1],
+            "Positif": probs[2]
+        })
+
+        st.caption(f"Teks setelah preprocessing: {clean}")
+
 
 
